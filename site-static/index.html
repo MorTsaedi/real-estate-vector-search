@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vector Search Demo — describe it, find it</title>
+<style>
+:root{
+  --bg:#FAF8F2; --card:#FFFFFF; --ink:#1C1B17; --dim:#6E675C; --faint:#A39A8B;
+  --line:#E7E1D3; --accent:#0E6B4F; --accent-d:#0A4F3B; --gold:#B8860B;
+  --serif:Georgia,'Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100vh}
+.wrap{max-width:1400px;margin:0 auto;padding:0 28px 80px}
+/* top bar */
+.top{display:flex;align-items:center;gap:26px;padding:20px 0;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--serif);font-size:22px;font-weight:700;text-decoration:none;color:var(--ink)}
+.brand span{color:var(--accent)}
+.top nav{display:flex;gap:20px;margin-left:auto;font-size:14px}
+.top nav a{color:var(--dim);text-decoration:none;cursor:pointer}
+.top nav a:hover{color:var(--ink)}
+.count{font-size:12.5px;color:var(--dim);border:1px solid var(--line);border-radius:999px;
+  padding:6px 14px;background:var(--card);white-space:nowrap}
+/* hero */
+.hero{padding:60px 0 8px;margin:0 auto;text-align:center}
+h1{font-family:var(--serif);font-size:clamp(34px,5vw,54px);line-height:1.08;
+  letter-spacing:-.5px;font-weight:700}
+h1 em{font-style:italic;color:var(--accent)}
+.sub{color:var(--dim);font-size:16px;line-height:1.6;margin:14px auto 0;max-width:600px}
+/* AI search — the centerpiece */
+.ai{margin:30px auto 0;background:var(--card);
+  border:1px solid var(--line);border-radius:24px;padding:30px 30px 24px;
+  box-shadow:0 30px 70px rgba(28,27,23,.12);text-align:center}
+.ai label{font-size:11.5px;letter-spacing:2px;text-transform:uppercase;color:var(--faint);
+  font-weight:700}
+.ai .box{display:flex;gap:10px;margin-top:16px}
+.ai input{flex:1;font-size:16.5px;padding:18px 20px;border-radius:15px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);outline:none;
+  transition:border-color .15s,box-shadow .15s;min-width:0}
+.ai input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(14,107,79,.12)}
+.ai input::placeholder{color:var(--faint)}
+.ai button{border:none;cursor:pointer;font-size:15px;font-weight:700;padding:0 34px;
+  border-radius:15px;background:var(--accent);color:#fff;transition:background .15s,transform .15s;
+  white-space:nowrap}
+.ai button:hover:not(:disabled){background:var(--accent-d);transform:translateY(-1px)}
+.ai button:disabled{opacity:.6;cursor:wait}
+/* uploaded-photo preview — lives in the search box */
+.imgprev{margin-top:12px;display:flex;align-items:center;gap:16px;justify-content:center;
+  font-size:14px;color:var(--dim);flex-wrap:wrap}
+.imgprev img{width:330px;height:330px;border-radius:16px;object-fit:cover;border:1px solid var(--line);
+  box-shadow:0 4px 16px rgba(28,27,23,.18)}
+.imgprev b{color:var(--ink)}
+/* classic filters */
+.filt{margin:16px auto 0;background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:22px 24px;text-align:left}
+.filt h2{font-size:11.5px;letter-spacing:2px;text-transform:uppercase;color:var(--faint);
+  margin-bottom:14px}
+.frow{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.fld{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--dim)}
+.fld .reso{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;
+  letter-spacing:1px;color:var(--faint)}
+.fld input,.fld select{font-size:14px;padding:11px 13px;border-radius:11px;
+  border:1px solid var(--line);background:#fff;color:var(--ink);outline:none;min-width:130px}
+.fld input:focus,.fld select:focus{border-color:var(--accent)}
+.pills{display:flex;gap:8px}
+.pill{font-size:13.5px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);
+  background:#fff;cursor:pointer;color:var(--dim)}
+.pill.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.gobtn{border:none;cursor:pointer;font-size:14px;font-weight:700;padding:12px 24px;
+  border-radius:11px;background:var(--ink);color:#fff}
+.gobtn:hover:not(:disabled){background:#000}
+.gobtn:disabled{opacity:.6;cursor:wait}
+/* sections */
+.sec{margin-top:52px}
+.sec h2{font-family:var(--serif);font-size:26px;margin-bottom:4px}
+.sec p.d{color:var(--dim);font-size:14px;margin-bottom:20px}
+.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:1000px){.cats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.cats{grid-template-columns:1fr}}
+.cat{border:1px solid var(--line);border-radius:18px;background:var(--card);padding:20px}
+.cat h3{font-size:11.5px;letter-spacing:2px;text-transform:uppercase;color:var(--faint);
+  margin-bottom:12px}
+.cat a{display:flex;justify-content:space-between;font-size:14.5px;padding:9px 0;
+  border-bottom:1px dashed var(--line);color:var(--ink);text-decoration:none;cursor:pointer}
+.cat a:last-child{border:none}
+.cat a:hover{color:var(--accent)}
+.cat a b{font-variant-numeric:tabular-nums;color:var(--dim);font-weight:400}
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;
+  cursor:pointer;transition:transform .2s,box-shadow .2s;text-decoration:none;color:var(--ink);
+  display:block;opacity:0;transform:translateY(16px)}
+.card.show{animation:cin .5s ease forwards}
+@keyframes cin{to{opacity:1;transform:none}}
+.card:hover{transform:translateY(-4px);box-shadow:0 18px 44px rgba(28,27,23,.14)}
+.ph{position:relative;aspect-ratio:4/3;overflow:hidden;background:#E7E1D3}
+.ph img{position:relative;width:100%;height:100%;object-fit:contain;display:block}
+.ph .nophoto{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--faint)}
+.ph .n{position:absolute;bottom:10px;right:10px;font-size:11.5px;background:rgba(20,19,16,.75);
+  color:#fff;border-radius:999px;padding:4px 11px}
+.pad{padding:16px 18px 18px}
+.price{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums}
+.specs{font-size:13px;color:var(--dim);margin-top:5px}
+.dist{font-size:13px;color:var(--faint);margin-top:3px}
+.matchline{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pct{font-weight:800;font-size:18px}
+.aimatch{position:absolute;top:10px;left:10px;font-size:11.5px;font-weight:800;color:#fff;
+  background:rgba(14,107,79,.92);border-radius:999px;padding:5px 13px;letter-spacing:.3px;
+  box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.bar{flex:1;height:7px;border-radius:99px;background:var(--line);overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));border-radius:99px}
+.snip{font-size:12.5px;color:var(--faint);margin-top:8px;line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rhead{font-size:13px;color:var(--dim);margin:26px 0 14px}
+.rhead b{color:var(--ink)}
+.vs{margin-top:16px;border:1px dashed var(--line);border-radius:14px;padding:13px 17px;
+  font-size:13px;color:var(--dim);background:var(--card)}
+.vs b{color:var(--ink)}
+.ms{display:inline-block;font-weight:800;font-size:15px;color:var(--accent-d);
+  background:#EAF4EF;border-radius:999px;padding:4px 14px;margin:0 4px;
+  font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.chip{font-size:12.5px;border-radius:999px;padding:6px 13px;font-weight:600}
+.chip.hard{background:var(--ink);color:#fff}
+.chip.soft{background:transparent;border:1px dashed var(--faint);color:var(--dim)}
+.vbadge{display:inline-block;font-size:11px;font-weight:700;color:#8A5A00;
+  background:#FDF3E0;border:1px solid #EBD3A0;border-radius:999px;
+  padding:4px 11px;margin:8px 8px 0 0}
+.backfill{margin-top:26px;border-top:1px dashed var(--line);padding-top:18px}
+.backfill h3{font-family:var(--serif);font-size:19px}
+.backfill p{font-size:13px;color:var(--dim);margin:4px 0 14px}
+.duel{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 4px}
+.duel div{flex:1;min-width:230px;border:1px solid var(--line);border-radius:14px;
+  padding:13px 17px;font-size:13px;color:var(--dim);background:var(--card)}
+.duel div b{color:var(--ink)}
+.duel .t{font-size:22px;font-weight:800;color:var(--accent-d);font-variant-numeric:tabular-nums}
+.duel small{color:var(--faint);display:block;margin-top:2px}
+.vs{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0 4px}
+.vs div{flex:1;min-width:230px;border:1px solid var(--line);border-radius:14px;
+  padding:13px 17px;font-size:13px;color:var(--dim);background:var(--card)}
+.vs b{color:var(--ink)}
+.err{display:none;background:#FDECEC;border:1px solid #F3C1C1;color:#9B2C2C;
+  border-radius:14px;padding:15px 18px;margin-top:18px;font-size:14px}
+footer{margin-top:64px;border-top:1px solid var(--line);padding-top:22px;font-size:12.5px;
+  color:var(--faint);display:flex;gap:18px;flex-wrap:wrap}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="brand" href="/">Vector<span>Search Demo</span></a>
+    <nav><a id="nav-browse">Browse</a><a id="nav-ai">AI search</a><a id="nav-photo">Photo search</a><a id="nav-cats">Categories</a></nav>
+    <span class="count" id="count">…</span>
+  </div>
+
+  <div class="hero">
+    <h1>Describe the home.<br><em>We find it.</em></h1>
+    <p class="sub">Type what you want like you'd tell a friend.</p>
+    <div class="ai">
+      <label>AI demo search — plain English, photo-aware</label>
+      <div class="box">
+        <input id="q" autocomplete="off" spellcheck="false"
+          placeholder="Try: quiet 2-bedroom with air conditioner and open-plan kitchen for my family…">
+        <button id="photo-btn" title="Search by photo — upload or drag an image">📷 Photo</button>
+        <button id="go" style="padding:0 30px">Search</button>
+      </div>
+      <div class="imgprev" id="imgprev" style="display:none"></div>
+      <input type="file" id="imgfile" accept="image/*" style="display:none">
+    </div>
+    <div class="filt" id="browse">
+      <h2>Classic search — filters, sorted <span style="text-transform:none;letter-spacing:0">(RESO Data Dictionary fields)</span></h2>
+      <div class="frow">
+        <div class="fld">Rooms <span class="reso">BedroomsTotal</span>
+          <div class="pills" id="rooms">
+            <span class="pill" data-v="">Any</span><span class="pill" data-v="1">1</span>
+            <span class="pill" data-v="2">2</span><span class="pill" data-v="3">3</span>
+            <span class="pill" data-v="4+">4+</span>
+          </div>
+        </div>
+        <div class="fld">Min price $ <span class="reso">ListPrice ≥</span><input id="f-minp" type="number" min="0" placeholder="80000"></div>
+        <div class="fld">Max price $ <span class="reso">ListPrice ≤</span><input id="f-maxp" type="number" min="0" placeholder="150000"></div>
+        <div class="fld">Min area m² <span class="reso">LivingArea ≥</span><input id="f-mina" type="number" min="0" placeholder="60"></div>
+        <div class="fld">Max area m² <span class="reso">LivingArea ≤</span><input id="f-maxa" type="number" min="0" placeholder="150"></div>
+        <div class="fld">Built after <span class="reso">YearBuilt ≥</span><input id="f-year" type="number" min="1950" max="2030" placeholder="2020"></div>
+        <div class="fld">Must have <span class="reso">amenities</span>
+          <select id="f-amen">
+            <option value="">anything</option>
+            <option value="air conditioner">air conditioner</option>
+            <option value="quiet courtyard">quiet courtyard</option>
+            <option value="built-in kitchen">built-in kitchen</option>
+            <option value="parking">parking</option>
+            <option value="open-plan kitchen">open-plan kitchen</option>
+          </select>
+        </div>
+        <div class="fld">District <span class="reso">City</span>
+          <select id="f-dist"><option value="">all Bishkek</option></select>
+        </div>
+        <div class="fld">Sort <span class="reso">order by</span>
+          <select id="f-sort">
+            <option value="price_asc">cheapest first</option>
+            <option value="price_desc">priciest first</option>
+            <option value="rooms">most rooms</option>
+            <option value="area">largest area</option>
+            <option value="year">newest built</option>
+          </select>
+        </div>
+        <div class="fld">&nbsp;<button class="gobtn" id="fgo">Browse</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="aires"></div>
+
+
+  <div class="sec">
+    <h2>Featured homes</h2>
+    <p class="d">A fresh pick every visit. Click any home for photos and details.</p>
+    <div class="grid" id="feat"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Under $100k</h2>
+    <p class="d">Real budget picks, cheapest first.</p>
+    <div class="grid" id="row-budget"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Room to breathe</h2>
+    <p class="d">100 m² and up, biggest first.</p>
+    <div class="grid" id="row-big"></div>
+  </div>
+
+  <div class="sec" id="cats">
+    <h2>Browse by category</h2>
+    <p class="d">Real counts from the live index — click to filter.</p>
+    <div class="cats">
+      <div class="cat"><h3>By rooms</h3><div id="c-rooms"></div></div>
+      <div class="cat"><h3>By budget</h3><div id="c-bands"></div></div>
+      <div class="cat"><h3>With features</h3><div id="c-feats"></div></div>
+      <div class="cat"><h3>RESO standards</h3><div id="c-stds"></div></div>
+    </div>
+  </div>
+
+
+  <footer><span>Vector Search Demo — <b id="foot-count">…</b>, English descriptions</span>
+    <span>AI search: EmbeddingGemma-2 · cross-modal + RRF fusion</span></footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=v=>v==null?'—':'$'+Math.round(v).toLocaleString('en-US');
+let roomsel='';
+$('rooms').querySelectorAll('.pill').forEach(p=>p.onclick=()=>{
+  $('rooms').querySelectorAll('.pill').forEach(x=>x.classList.remove('on'));
+  p.classList.add('on');roomsel=p.dataset.v;});
+$('rooms').firstElementChild.classList.add('on');
+
+fetch('/api/stats').then(r=>r.json()).then(d=>{
+  $('count').textContent=d.listings.toLocaleString()+' homes · '+d.photos.toLocaleString()+' photos';
+  const fc=$('foot-count');
+  if(fc)fc.textContent=d.listings.toLocaleString()+' apartments · '+d.photos.toLocaleString()+' photos';
+  $('f-dist').innerHTML='<option value="">all Bishkek</option>'+(d.districts||[]).map(x=>
+    `<option value="${esc(x.name)}">${esc(x.name)} (${x.n.toLocaleString()})</option>`).join('');
+  $('c-rooms').innerHTML=d.rooms.filter(r=>r.rooms>=1&&r.rooms<=4).map(r=>
+    `<a data-t="rooms" data-v="${r.plus?'4+':r.rooms}">${r.plus?'4+':r.rooms} room${(!r.plus&&r.rooms===1)?'':'s'} <b>${r.n.toLocaleString()}</b></a>`).join('');
+  $('c-bands').innerHTML=d.bands.map(b=>{
+    const p=b.label.startsWith('Under')?{max_price:100000}:b.label.startsWith('$100')?{min_price:100000,max_price:200000}:{min_price:200000};
+    return `<a data-t="band" data-v='${JSON.stringify(p)}'>${esc(b.label)} <b>${b.n.toLocaleString()}</b></a>`;}).join('');
+  $('c-feats').innerHTML=d.features.map(f=>
+    `<a data-t="amen" data-v="${esc(f.q)}">${esc(f.label)} <b>${f.n.toLocaleString()}</b></a>`).join('');
+  $('c-stds').innerHTML=(d.standards||[]).map(f=>
+    `<a data-t="std" data-v="${esc(f.q)}" title="${esc(f.hint||'')}">${esc(f.label)} <b>${f.n.toLocaleString()}</b></a>`).join('');
+  document.querySelectorAll('#cats a').forEach(a=>a.onclick=()=>catgo(a));
+}).catch(()=>{});
+
+function resetFilters(){
+  roomsel='';$('f-minp').value='';$('f-maxp').value='';$('f-mina').value='';
+  $('f-maxa').value='';$('f-year').value='';$('f-amen').value='';$('f-dist').value='';
+  document.querySelectorAll('#rooms .pill').forEach(x=>x.classList.remove('on'));
+  $('rooms').firstElementChild.classList.add('on');
+}
+function catgo(a){
+  const t=a.dataset.t;
+  resetFilters();
+  if(t==='rooms'){roomsel=a.dataset.v;
+    document.querySelectorAll('#rooms .pill').forEach(x=>x.classList.toggle('on',x.dataset.v===roomsel));
+  }else if(t==='band'){const p=JSON.parse(a.dataset.v);
+    $('f-minp').value=p.min_price||'';$('f-maxp').value=p.max_price||'';
+  }else if(t==='std'){
+    if(a.dataset.v==='new'){$('f-year').value='2020';$('f-sort').value='year';}
+    else{$('f-mina').value='100';$('f-sort').value='area';}
+  }else{$('f-amen').value=a.dataset.v;}
+  fgo();document.getElementById('browse').scrollIntoView({behavior:'smooth'});
+}
+
+fetch('/api/featured?n=8').then(r=>r.json()).then(d=>{
+  $('feat').innerHTML=d.map((c,i)=>card(c,false,i)).join('');
+  stagger();
+}).catch(()=>{});
+fetch('/api/browse?max_price=100000&sort=price_asc&limit=8').then(r=>r.json()).then(d=>{
+  $('row-budget').innerHTML=d.results.map((c,i)=>card(c,false,i)).join('');
+  stagger();
+}).catch(()=>{});
+fetch('/api/browse?min_area=100&sort=area&limit=8').then(r=>r.json()).then(d=>{
+  $('row-big').innerHTML=d.results.map((c,i)=>card(c,false,i)).join('');
+  stagger();
+}).catch(()=>{});
+
+function card(c,ai,i){
+  const ppm=c.price_per_m2?' · $'+Math.round(c.price_per_m2).toLocaleString()+'/m²':'';
+  const fl=c.floor?` · floor ${esc(c.floor)}`:'';
+  const vb=(c.violations||[]).map(v=>`<span class="vbadge">${esc(v)}</span>`).join('');
+  const match=c.match_pct!=null?`<div class="matchline"><span class="pct">${c.match_pct}%</span><div class="bar"><i style="width:${c.match_pct}%"></i></div></div>`:'';
+  const href=(ai&&c.match_idx!=null)
+    ?`/property/${esc(c.listing_id)}?match=${c.match_idx}&q=${encodeURIComponent(lastQ||'')}`
+    :`/property/${esc(c.listing_id)}`;
+  const src=ai&&c.match_photo?c.match_photo:c.cover;
+  const img=src?`<img loading="lazy" src="${esc(src)}" alt="" data-cover="${esc(c.cover||'')}" onerror="if(!this.dataset.fb&&this.src!==this.dataset.cover){this.dataset.fb=1;this.src=this.dataset.cover;}else{this.style.display='none';}">`
+    :`<span class="nophoto">No photos</span>`;
+  return `<a class="card" style="animation-delay:${(i||0)*70}ms" href="${href}">
+    <div class="ph">${img}
+      ${ai&&c.match_photo?'<span class="aimatch">✨ AI picked this photo</span>':''}
+      <span class="n">${c.n_photos} photos</span></div>
+    <div class="pad">${match}<div class="price">${money(c.price)}<span style="font-size:12.5px;color:var(--faint);font-weight:400">${ppm}</span></div>
+      <div class="specs">${c.bedrooms??'—'} rooms · ${c.area_m2??'—'} m²${fl}</div>
+      <div>${vb}</div>
+      <div class="dist">${esc(c.district)}</div>
+      <div class="snip">${esc(c.snippet)}</div></div></a>`;
+}
+function stagger(){requestAnimationFrame(()=>requestAnimationFrame(()=>
+  document.querySelectorAll('.card:not(.show)').forEach(b=>b.classList.add('show'))));}
+
+let agoing=false;
+let lastAI=null,lastFilter=null,lastQ='',moreOffset=8; // {ms, n, label} for the duel strip
+function duelHTML(){
+  if(!lastAI||!lastFilter)return '';
+  const w=lastAI.ms<=lastFilter.ms?['AI search','Filters']:['Filters','AI search'];
+  return `<div class="duel">
+    <div><b>✨ AI search</b><span class="t">${lastAI.ms} ms</span>${lastAI.n} shown, ranked by meaning<small>${lastAI.label}</small></div>
+    <div><b>🔍 Filter search</b><span class="t">${lastFilter.ms} ms</span>${lastFilter.n} matched, sorted<small>${lastFilter.label}</small></div>
+    <div><b>🏁 Faster</b><span class="t" style="font-size:17px">${esc(w[0])}</span><small>but only AI ranks by meaning + matches photos</small></div>
+  </div>`;
+}
+async function go(){
+  const q=$('q').value.trim();
+  if(!q||agoing)return;
+  agoing=true;const b=$('go');b.disabled=true;b.textContent='…';
+  const box=$('aires');box.innerHTML='<div class="rhead">Reading your sentence…</div>';
+  try{
+    const r=await fetch('/api/aisearch?q='+encodeURIComponent(q)+'&k=8');
+    if(r.status===503)throw new Error('AI server is warming up — use classic search meanwhile.');
+    if(!r.ok)throw new Error('server '+r.status);
+    const d=await r.json();
+    lastAI={ms:d.ms,n:d.results.length+' homes',label:'“'+q+'”'};
+    lastQ=q;moreOffset=d.results.length+(d.backfill||[]).length;
+    const hard=d.filters&&d.filters.hard||{},soft=d.filters&&d.filters.soft||[];
+    const H={max_price:v=>`under $${Math.round(v).toLocaleString()}`,min_price:v=>`over $${Math.round(v).toLocaleString()}`,
+      min_rooms:v=>`${v}+ rooms`,min_area:v=>`${v} m²+`,max_area:v=>`under ${v} m²`};
+    const chips=Object.entries(hard).map(([k,v])=>`<span class="chip hard">🔒 ${esc(H[k]?H[k](v):k)}</span>`).join('')
+      +soft.map(s=>`<span class="chip soft">${esc(s)} (preference)</span>`).join('');
+    const bf=(d.backfill||[]).length?`<div class="backfill"><h3>Also consider — outside your limits</h3>
+      <p>Nothing else matched every rule, so here are the closest near-misses, honestly labeled.</p>
+      <div class="grid">${d.backfill.map((c,i)=>card(c,true,i)).join('')}</div></div>`:'';
+    box.innerHTML=`<div class="rhead"><b>${d.results.length}</b> homes for “${esc(q)}” · found in <span class="ms">${d.ms} ms</span></div>
+      ${chips?`<div class="chips">${chips}</div>`:''}
+      ${duelHTML()}
+      <div class="grid" id="aigrid">${d.results.map((c,i)=>card(c,true,i)).join('')}</div>${bf}
+      ${d.results.length>=8?`<div style="text-align:center;margin-top:18px"><button class="gobtn" id="morebtn">Show more matches ↓</button></div>`:''}
+      <div class="vs"><div><b>Why these, and why this photo?</b> Your sentence, every description and all ~60,000 photos live in one EmbeddingGemma-2 vector space — the shown photo is the one that matched your words (✨ badge), not the cover. Ranked by RRF fusion over text + photo + whole-property vectors.</div></div>`;
+    stagger();box.scrollIntoView({behavior:'smooth',block:'start'});
+    const mb=$('morebtn');
+    if(mb)mb.onclick=()=>moreGo();
+  }catch(e){box.innerHTML=`<div class="err" style="display:block">AI search failed: ${esc(e.message)}</div>`;}
+  finally{agoing=false;b.disabled=false;b.textContent='Search';}
+}
+$('go').onclick=go;
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
+$('photo-btn').onclick=()=>$('imgfile').click();
+
+let imggoing=false,imgURL=null;
+async function imggo(file){
+  if(!file||imggoing)return;
+  if(!file.type||!file.type.startsWith('image/')){alert('That is not an image file — drop a JPG or PNG.');return;}
+  imggoing=true;
+  if(imgURL)URL.revokeObjectURL(imgURL);
+  imgURL=URL.createObjectURL(file);
+  const pv=$('imgprev');
+  pv.style.display='flex';
+  pv.innerHTML=`<img src="${imgURL}" alt="your photo"><span><b>Reading your photo…</b></span>`;
+  try{
+    const r=await fetch('/api/imagesearch?k=12',{method:'POST',body:file});
+    if(r.status===503)throw new Error('AI server is warming up — try again in a moment.');
+    if(!r.ok)throw new Error('server '+r.status);
+    const d=await r.json();
+    pv.innerHTML=`<img src="${imgURL}" alt="your photo"><span><b>Searching with this photo</b> · ${d.results.length} homes · ${d.ms} ms</span>`;
+    lastQ='';
+    const box=$('aires');
+    box.innerHTML=`<div class="rhead"><b>${d.results.length}</b> homes that look like your photo · found in <span class="ms">${d.ms} ms</span></div>
+      <div class="grid">${d.results.map((c,i)=>card(c,true,i)).join('')}</div>
+      <div class="vs"><div><b>Why these?</b> Your upload (previewed above) was embedded by the same model that read all ~60,000 listing photos and every description — one shared vector space, ranked by distance in it. The ✨ photo shows where your picture matched.</div></div>`;
+    stagger();box.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){pv.innerHTML=`<img src="${imgURL}" alt="your photo"><span style="color:#9B2C2C"><b>Photo search failed:</b> ${esc(e.message)}</span>`;}
+  finally{imggoing=false;}
+}
+$('imgfile').addEventListener('change',e=>{if(e.target.files.length)imggo(e.target.files[0]);e.target.value='';});
+
+let moregoing=false;
+async function moreGo(){
+  if(moregoing||!lastQ)return;
+  moregoing=true;const b=$('morebtn');if(b){b.disabled=true;b.textContent='Loading…';}
+  try{
+    const r=await fetch('/api/aisearch?q='+encodeURIComponent(lastQ)+'&k=8&offset='+moreOffset);
+    if(!r.ok)throw new Error('server '+r.status);
+    const d=await r.json();
+    const grid=document.querySelector('#aires .grid');
+    const cards=d.results.map((c,i)=>card(c,true,moreOffset+i)).join('')
+      + (d.backfill||[]).map((c,i)=>card(c,true,moreOffset+d.results.length+i)).join('');
+    if(grid)grid.insertAdjacentHTML('beforeend',cards);
+    moreOffset+=d.results.length+(d.backfill||[]).length;
+    stagger();
+    const total=d.total||0;
+    if(b){
+      if(moreOffset>=total||(!d.results.length&&!(d.backfill||[]).length))b.style.display='none';
+      else{b.disabled=false;b.textContent=`Show more matches ↓ (${total-moreOffset} left)`;}
+    }
+  }catch(e){if(b){b.disabled=false;b.textContent='Show more matches ↓';}alert('Could not load more: '+e.message);}
+  finally{moregoing=false;}
+}
+// deep-link: /?q=<query> auto-runs the AI search (for demos, videos, shares)
+try{const dq=new URLSearchParams(location.search).get('q');
+if(dq){$('q').value=dq;setTimeout(go,600);}}catch(e){}
+
+let fgoing=false;
+async function fgo(){
+  if(fgoing)return;
+  const p=new URLSearchParams({min_price:$('f-minp').value,max_price:$('f-maxp').value,
+    min_area:$('f-mina').value,max_area:$('f-maxa').value,min_year:$('f-year').value,
+    amenity:$('f-amen').value,district:$('f-dist').value,
+    sort:$('f-sort').value,limit:12});
+  if(roomsel==='4+')p.set('rooms_min','4');
+  else if(roomsel)p.set('rooms',roomsel);
+  fgoing=true;const b=$('fgo');b.disabled=true;b.textContent='…';
+  try{
+    const r=await fetch('/api/browse?'+p.toString());
+    if(!r.ok)throw new Error('server '+r.status);
+    const d=await r.json();
+    lastFilter={ms:d.ms,n:d.matched.toLocaleString()+' matches',label:'sorted by '+$('f-sort').selectedOptions[0].text};
+    let box=$('frow');
+    if(!box){box=document.createElement('div');box.id='frow';
+      $('browse').parentElement.insertBefore(box,$('browse').nextSibling);}
+    box.innerHTML=`<div class="rhead"><b>${d.matched.toLocaleString()}</b> match · server <span class="ms">${d.ms} ms</span> · sorted, no AI involved</div>
+      ${duelHTML()}
+      <div class="grid">${d.results.map((c,i)=>card(c,false,i)).join('')}</div>`;
+    stagger();box.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){alert('Browse failed: '+e.message);}
+  finally{fgoing=false;b.textContent='Browse';}
+}
+$('fgo').onclick=fgo;
+$('nav-browse').onclick=()=>$('browse').scrollIntoView({behavior:'smooth'});
+$('nav-ai').onclick=()=>{$('q').focus();window.scrollTo({top:0,behavior:'smooth'});};
+$('nav-photo').onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});$('photo-btn').focus();};
+$('nav-cats').onclick=()=>$('cats').scrollIntoView({behavior:'smooth'});
+</script>
+</body>
+</html>

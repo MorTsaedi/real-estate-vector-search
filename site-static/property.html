@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home — Vector Search Demo</title>
+<style>
+:root{
+  --bg:#FAF8F2; --card:#FFFFFF; --ink:#1C1B17; --dim:#6E675C; --faint:#A39A8B;
+  --line:#E7E1D3; --accent:#0E6B4F; --accent-d:#0A4F3B;
+  --serif:Georgia,'Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100vh}
+.wrap{max-width:1400px;margin:0 auto;padding:0 28px 80px}
+.top{display:flex;align-items:center;gap:26px;padding:20px 0;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--serif);font-size:22px;font-weight:700;text-decoration:none;color:var(--ink)}
+.brand span{color:var(--accent)}
+.top nav{display:flex;gap:20px;margin-left:auto;font-size:14px}
+.top nav a{color:var(--dim);text-decoration:none}
+.top nav a:hover{color:var(--ink)}
+.crumbs{margin:22px 0 10px;font-size:13px;color:var(--faint)}
+.crumbs a{color:var(--dim);text-decoration:none}
+.crumbs a:hover{color:var(--accent)}
+h1{font-family:var(--serif);font-size:clamp(26px,3.6vw,38px);letter-spacing:-.3px}
+.addr{color:var(--dim);font-size:14.5px;margin-top:6px}
+.layout{display:grid;grid-template-columns:1.35fr 1fr;gap:30px;align-items:start;margin-top:18px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.main{position:relative}
+.main img.fg{width:100%;border-radius:18px;display:block;aspect-ratio:4/3;object-fit:contain;
+  background:#E7E1D3;border:1px solid var(--line);cursor:zoom-in}
+/* fullscreen lightbox — always the sharp original, never blurred */
+.lb{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  background:rgba(10,10,9,.94);cursor:zoom-out}
+.lb.open{display:flex}
+.lb img{max-width:94vw;max-height:90vh;object-fit:contain;border-radius:10px;
+  box-shadow:0 30px 100px rgba(0,0,0,.6)}
+.lb .n{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);color:#fff;
+  font-size:13px;background:rgba(255,255,255,.14);border-radius:999px;padding:6px 16px;
+  font-variant-numeric:tabular-nums}
+.lb .x{position:absolute;top:18px;right:20px;background:none;border:1px solid rgba(255,255,255,.35);
+  color:#fff;font-size:16px;width:40px;height:40px;border-radius:12px;cursor:pointer}
+.lb .x:hover{border-color:#fff}
+.lb .nav{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;
+  border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);
+  color:#fff;font-size:20px;cursor:pointer}
+.lb .nav:hover{background:rgba(255,255,255,.2)}
+.lb #lprev{left:18px}.lb #lnext{right:18px}
+.count{position:absolute;bottom:14px;left:14px;font-size:12.5px;background:rgba(20,19,16,.78);
+  color:#fff;border-radius:999px;padding:6px 15px;font-variant-numeric:tabular-nums}
+.nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;
+  border:none;background:rgba(255,255,255,.92);font-size:18px;cursor:pointer;color:var(--ink);
+  box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.nav:hover{background:#fff}
+#prev{left:14px}#next{right:14px}
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;
+  margin-top:10px}
+.strip img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:11px;cursor:pointer;
+  border:2px solid transparent;background:#EDE8DB}
+.strip img.on{border-color:var(--accent)}
+.pbadge{position:absolute;bottom:6px;left:6px;font-size:11px;font-weight:800;
+  background:rgba(20,19,16,.8);color:#fff;border-radius:999px;padding:3px 10px;
+  font-variant-numeric:tabular-nums}
+.mribbon{position:absolute;top:0;left:0;font-size:12px;font-weight:900;color:#231303;
+  background:linear-gradient(135deg,#FFE36E,#FFC53D);padding:5px 11px 5px 9px;
+  border-radius:0 0 10px 0;box-shadow:0 0 12px rgba(255,197,61,.9),0 1px 5px rgba(0,0,0,.4);
+  letter-spacing:.3px;animation:starpulse 1.8s ease-in-out infinite;white-space:nowrap;max-width:100%;overflow:hidden}
+@keyframes starpulse{0%,100%{box-shadow:0 0 12px rgba(255,197,61,.8),0 2px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 26px rgba(255,197,61,1),0 2px 8px rgba(0,0,0,.4)}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:26px}
+.price{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
+.perm{font-size:14px;color:var(--dim);margin-top:4px}
+.mort{font-size:13.5px;color:var(--dim);margin-top:8px;background:var(--bg);
+  border:1px solid var(--line);border-radius:12px;padding:11px 14px}
+.mort b{color:var(--ink)}
+.specs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.spec{font-size:13px;background:var(--bg);border:1px solid var(--line);
+  padding:7px 14px;border-radius:999px}
+.amen{margin-top:6px}
+.amen span{display:inline-block;font-size:12.5px;background:#EAF4EF;color:var(--accent-d);
+  border-radius:999px;padding:6px 13px;margin:0 7px 7px 0;font-weight:600}
+.seller{font-size:13px;color:var(--dim);margin-top:12px}
+.cta{margin-top:18px;display:flex;gap:10px}
+.cta button{flex:1;border:none;cursor:pointer;font-size:14.5px;font-weight:700;
+  padding:15px;border-radius:13px}
+.cta .call{background:var(--accent);color:#fff}
+.cta .call:hover{background:var(--accent-d)}
+.cta .msg{background:var(--ink);color:#fff}
+.about{background:var(--card);border:1px solid var(--line);
+  border-radius:20px;padding:24px 26px}
+.about h2{font-family:var(--serif);font-size:21px;margin-bottom:6px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:22px;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+.kv{display:flex;justify-content:space-between;gap:16px;font-size:14px;padding:10px 0;
+  border-bottom:1px dashed var(--line)}
+.kv:last-child{border:none}
+.kv .k{color:var(--faint)}
+.kv .v{text-align:right;font-weight:600}
+.desc{margin-top:20px;line-height:1.75;font-size:15px;color:#33302A;white-space:pre-wrap}
+.desc-src{margin-top:14px;line-height:1.7;font-size:13.5px;color:var(--faint);
+  border-left:3px solid var(--line);padding-left:14px;white-space:pre-wrap}
+.sec{margin-top:52px}
+.sec h2{font-family:var(--serif);font-size:24px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+#sim{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:1000px){#sim{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){#sim{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;
+  cursor:pointer;transition:transform .2s,box-shadow .2s;text-decoration:none;color:var(--ink);
+  display:block}
+.card:hover{transform:translateY(-4px);box-shadow:0 18px 44px rgba(28,27,23,.14)}
+.ph{position:relative;aspect-ratio:4/3;overflow:hidden;background:#E7E1D3}
+.ph img{position:relative;width:100%;height:100%;object-fit:contain;display:block}
+.ph .n{position:absolute;bottom:10px;right:10px;font-size:11.5px;background:rgba(20,19,16,.75);
+  color:#fff;border-radius:999px;padding:4px 11px}
+.pad{padding:16px 18px 18px}
+.pad .price{font-size:21px}
+.specs2{font-size:13px;color:var(--dim);margin-top:5px}
+.err{display:none;background:#FDECEC;border:1px solid #F3C1C1;color:#9B2C2C;
+  border-radius:14px;padding:15px 18px;margin-top:18px;font-size:14px}
+footer{margin-top:64px;border-top:1px solid var(--line);padding-top:22px;font-size:12.5px;color:var(--faint)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="brand" href="/">Vector<span>Search Demo</span></a>
+    <nav><a href="/#browse">Browse</a><a href="/">AI search</a></nav>
+  </div>
+  <div id="body"></div>
+  <div class="err" id="err"></div>
+  <div class="lb" id="lb"><img id="lbimg" alt="" onerror="mainBad()">
+    <span class="n" id="lcount"></span>
+    <button class="x" id="lx">✕</button>
+    <button class="nav" id="lprev">‹</button><button class="nav" id="lnext">›</button>
+  </div>
+  <div class="sec" id="simsec" style="display:none">
+    <h2>Similar homes</h2>
+    <p style="font-size:13px;color:var(--dim);margin:-8px 0 16px">Ranked by vector distance — closest meaning-vectors to this home, not just same price or rooms.</p>
+    <div class="grid" id="sim"></div>
+  </div>
+  <footer>Vector Search Demo · English descriptions · real photos</footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=v=>v==null?'—':'$'+Math.round(v).toLocaleString('en-US');
+const id=decodeURIComponent(location.pathname.split('/').pop());
+let matchIdx=-1,matchQ='',scoreByIdx={};
+let scoreByFile={};
+try{const sp=new URLSearchParams(location.search);
+const m=sp.get('match');if(m!==null&&m!=='')matchIdx=parseInt(m,10);
+matchQ=sp.get('q')||'';}catch(e){}
+let cur=0,photos=[],matchPos=-1;
+const starred=new Set(); // matched FILE suffixes, e.g. "_007.jpg" — stable across removals
+function fileKey(u){const m=(u||'').match(/_(\d+)\.jpg$/);return m?m[0]:u;}
+function show(i){
+  if(!photos.length||!Number.isFinite(i))return;
+  cur=((Math.round(i)%photos.length)+photos.length)%photos.length;
+  if(!photos[cur])return;
+  $('main').src=photos[cur];
+  const pc=(cur+1)+' of '+photos.length+(starred.has(fileKey(photos[cur]))?' ★ matched your search':'');
+  $('pcount').textContent=pc+(scoreByIdx[cur]!=null?` · ${scoreByIdx[cur]}% match`:'');
+  if($('lb').classList.contains('open'))lshow();
+}
+function paintRibbons(){
+  document.querySelectorAll('.strip .th').forEach(t=>{
+    t.querySelectorAll('.mribbon').forEach(r=>r.remove());
+    const im=t.querySelector('img');
+    const src=im?im.getAttribute('src'):'';
+    if(starred.has(fileKey(src))){
+      const m2=(src||'').match(/_(\d+)\.jpg$/);
+      const pct=m2&&scoreByFile[parseInt(m2[1],10)]!=null?scoreByFile[parseInt(m2[1],10)]:null;
+      t.style.outline='3px solid #FFC53D';t.style.outlineOffset='-3px';t.style.borderRadius='11px';
+      t.insertAdjacentHTML('beforeend',
+        `<span class="mribbon">★${pct!=null?' '+pct+'%':''} MATCH</span>`);
+    } else {t.style.outline='';}
+  });
+}
+function mainBad(){
+  // A file the API lists but the disk doesn't have (partial download, resync):
+  // drop it from the gallery and move on instead of showing a broken tile.
+  const before=photos.length;
+  const bad=photos[cur];
+  photos=photos.filter(u=>u!==bad);
+  if(photos.length===before){
+    // nothing removed: index confusion, stop instead of looping forever
+    if($('main'))$('main').style.display='none';
+    lclose();return;
+  }
+  document.querySelectorAll('.strip .th').forEach(t=>{
+    if((t.querySelector('img')||{}).getAttribute?.('src')===bad)t.remove();});
+  document.querySelectorAll('.strip .th').forEach((t,j)=>{
+    const im=t.querySelector('img');if(im)im.dataset.i=j;t.dataset.i=j;});
+  if(!photos.length){
+    if($('main'))$('main').style.display='none';
+    lclose();return;
+  }
+  show(cur%photos.length);
+  paintRibbons();
+}
+function lshow(){
+  if(!photos.length||!photos[cur]){lclose();return;}
+  $('lbimg').src=photos[cur];
+  $('lcount').textContent=(cur+1)+' of '+photos.length+(scoreByIdx[cur]!=null?` · ${scoreByIdx[cur]}%`:'');
+}
+function lopen(){lshow();$('lb').classList.add('open');document.body.style.overflow='hidden';}
+function lclose(){$('lb').classList.remove('open');document.body.style.overflow='';}
+$('lx').onclick=lclose;
+$('lb').addEventListener('click',e=>{if(e.target===$('lb')||e.target===$('lbimg'))lclose();});
+$('lprev').onclick=e=>{e.stopPropagation();show(cur-1);};
+$('lnext').onclick=e=>{e.stopPropagation();show(cur+1);};
+fetch('/api/property/'+encodeURIComponent(id)).then(r=>{
+  if(r.status===404)throw new Error('This home no longer exists.');
+  if(!r.ok)throw new Error('server '+r.status);
+  return r.json();
+}).then(p=>{
+  const h1=`Apartment, ${p.bedrooms??'—'} rooms, ${p.area_m2??'—'} m²`;
+  document.title=`${h1} — Vector Search Demo`;
+  photos=p.photos;
+  if(matchIdx>=0){
+    const mp=photos.findIndex(u=>{const m=u.match(/_(\d+)\.jpg$/);return m&&+m[1]===matchIdx;});
+    matchPos=mp;if(mp>=0)cur=mp;
+  }
+  $('body').innerHTML=`
+    <div class="crumbs"><a href="/">Bishkek</a> / Buy / Apartment / ${esc(p.district)}</div>
+    <h1>${esc(h1)}</h1>
+    <div class="addr">${esc(p.address||p.district)}, Bishkek · <a href="#" style="color:var(--accent)" onclick="return false">on the map</a></div>
+    <div class="layout"><div>
+      <div class="main"><img class="fg" id="main" src="${esc(photos[cur]||photos[0]||'')}" alt="" onerror="mainBad()">
+        <span class="count" id="pcount">1 of ${photos.length}</span>
+        <button class="nav" id="prev">‹</button><button class="nav" id="next">›</button></div>
+      <div class="strip">${photos.map((u,i)=>{
+        return `<span class="th" data-i="${i}" style="position:relative;display:block;">
+          <img src="${esc(u)}" loading="lazy" class="${i===cur?'on':''}" `+
+          `onerror="this.closest('.th').style.display='none'"></span>`;}).join('')}</div>
+      ${matchQ?`<div id="starnote" style="display:none;font-size:12.5px;color:var(--accent-d);margin-top:8px;font-weight:700"></div>`:''}
+      <div class="desc">${esc(p.description)}</div>
+      ${p.description_src?`<div class="desc-src">Original (Russian):<br>${esc(p.description_src)}</div>`:''}
+    </div>
+    <div><div class="panel">
+      <div class="price">${money(p.price)}</div>
+      <div class="perm">${p.price_per_m2?'$'+Math.round(p.price_per_m2).toLocaleString()+' per m²':''}</div>
+      ${p.mortgage?`<div class="mort">Est. mortgage <b>$${p.mortgage.toLocaleString()}/mo</b> · 20% down, 20 yrs</div>`:''}
+      <div class="specs">
+        <span class="spec">${p.bedrooms??'—'} rooms</span>
+        <span class="spec">${p.area_m2??'—'} m²</span>
+      </div>
+      ${p.amenities&&p.amenities.length?`<div class="amen">${p.amenities.map(a=>`<span>${esc(a)}</span>`).join('')}</div>`:''}
+      ${p.seller?`<div class="seller">Seller: ${esc(p.seller)}</div>`:''}
+      <div class="cta"><button class="call">Call agent</button><button class="msg">Message</button></div>
+    </div>
+    <div class="about" style="margin-top:18px"><h2>About the apartment</h2>
+      ${p.specs.map(s=>`<div class="kv"><span class="k">${esc(s.k)}</span><span class="v">${esc(s.v)}</span></div>`).join('')}
+    </div></div>
+    </div>`;
+  document.querySelectorAll('.strip .th').forEach(t=>t.onclick=()=>{
+    const n=+t.dataset.i;show(Number.isFinite(n)?n:0);});
+  show(cur);
+  // per-photo match scores against the query that brought us here.
+  // keyed by FILE index (stable across removals); painted onto positions.
+  scoreByFile={};
+  window.paintBadges=function(){
+    // maps file-idx scores onto gallery positions (feeds counter + lightbox)
+    const byUrl={};
+    photos.forEach((u,i)=>{const m=u.match(/_(\d+)\.jpg$/);if(m)byUrl[+m[1]]=i;});
+    scoreByIdx={};
+    Object.entries(scoreByFile).forEach(([fi,pct])=>{
+      if(byUrl[fi]!=null)scoreByIdx[byUrl[fi]]=+pct;});
+    show(cur);
+  };
+  if(matchQ){
+    fetch('/api/photo_scores?listing_id='+encodeURIComponent(id)+'&q='+encodeURIComponent(matchQ))
+      .then(r=>r.ok?r.json():{scores:[]}).then(d=>{
+        (d.scores||[]).forEach(s=>{scoreByFile[s.idx]=s.pct;});
+        // star EVERY photo above 80% match (fallback: the single best one,
+        // so a clicked match never lands on a starless page)
+        const ranked=Object.entries(scoreByFile)
+          .sort((a,b)=>b[1]-a[1]);
+        starred.clear();
+        ranked.filter(([,pct])=>pct>80).forEach(([fi])=>{
+          photos.forEach(u=>{const m=u.match(/_(\d+)\.jpg$/);
+            if(m&&+m[1]===+fi)starred.add(fileKey(u));});
+        });
+        if(!starred.size&&ranked.length){
+          const [fi]=ranked[0];
+          photos.forEach(u=>{const m=u.match(/_(\d+)\.jpg$/);
+            if(m&&+m[1]===+fi)starred.add(fileKey(u));});
+        }
+        const note=$('starnote');
+        if(note&&starred.size){
+          note.style.display='block';
+          note.textContent=`★ ${starred.size} starred photo${starred.size>1?'s':''} matched your search — the rest didn't.`;
+        }
+        paintBadges();
+        paintRibbons();
+        paintRibbons();
+      }).catch(()=>{});
+  }
+  $('prev').onclick=()=>show(cur-1);$('next').onclick=()=>show(cur+1);
+  $('main').onclick=()=>lopen();
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){lclose();return;}
+    if(e.key==='ArrowRight')show(cur+1);if(e.key==='ArrowLeft')show(cur-1);});
+  if(p.similar&&p.similar.length){
+    $('simsec').style.display='block';
+    $('sim').innerHTML=p.similar.map(s=>`
+      <a class="card" href="/property/${esc(s.listing_id)}">
+        <div class="ph">${s.cover?`<img loading="lazy" src="${esc(s.cover)}" onerror="this.style.display='none'">`:'<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--faint)">NO PHOTOS</span>'}<span class="n">${s.n_photos} photos</span></div>
+        <div class="pad"><div class="price">${money(s.price)}</div>
+          <div class="specs2">${s.bedrooms??'—'} rooms · ${s.area_m2??'—'} m² · ${esc(s.district)}</div></div></a>`).join('');
+  }
+}).catch(e=>{const b=$('err');b.style.display='block';b.textContent='Could not load home: '+e.message;});
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# pipeline
+sentence-transformers>=6.1.0
+torch
+torchvision
+transformers
+pillow
+numpy
+pandas
+psycopg[binary]
+huggingface_hub>=0.24
+requests
+
+# website
+fastapi
+uvicorn
+httpx
+python-multipart

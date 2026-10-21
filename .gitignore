@@ -1,0 +1,15 @@
+# data & models never leave the machine
+data/
+models/
+bin/
+__pycache__/
+*.pyc
+
+# machine-local logs, videos, datasets
+*.log
+*.mp4
+*.npz
+
+# editor junk
+.vscode/
+.idea/
