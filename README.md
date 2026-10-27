@@ -8,17 +8,13 @@ Built and run end to end on real data: **7,300+ apartments, 60,000 photos,
 millisecond answers on a second-hand RX 5700 XT**. One solo developer,
 one cheap GPU, zero paid AI services.
 
-| AI sentence search | Search by photo |
-|---|---|
-| ![AI search](docs/ai-search.png) | ![Photo search](docs/photo-search.png) |
+![AI sentence search — one sentence in, ranked homes out](docs/ai-search.png)
 
 Every result card shows the photo the engine actually matched — not the
-cover shot — with a score. On the property page, matched photos carry
+cover shot — with a score. Photo search behaves the same across all three
+vector kinds. More screenshots live in `docs/` (`photo-search.png`,
+`property-page.png`) — on the property page, matched photos carry
 percentage ribbons: per-photo attribution, not black-box vibes.
-
-| Property page |
-|---|
-| ![Property page](docs/property-page.png) |
 
 ## Architecture (30 seconds)
 
