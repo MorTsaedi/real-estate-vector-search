@@ -16,6 +16,13 @@ vector kinds. More screenshots live in `docs/` (`photo-search.png`,
 `property-page.png`) — on the property page, matched photos carry
 percentage ribbons: per-photo attribution, not black-box vibes.
 
+## Demo video
+
+[![Watch the demo on YouTube — RAG for real-estate: semantic search + photo-aware search](https://img.youtube.com/vi/69ZG5eF7Aus/maxresdefault.jpg)](https://youtu.be/69ZG5eF7Aus)
+
+A walkthrough of the pipeline and the live demo: sentence search, photo
+search, and the per-photo attribution behind each result.
+
 ## Architecture (30 seconds)
 
 ```text
